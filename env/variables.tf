@@ -43,3 +43,15 @@ variable "monitoring_repo" {
   type        = string
   default     = "https://github.com/MiniPG/Monitoring.git"
 }
+
+variable "domain_name" {
+  description = "Route 53에 이미 있는 호스팅 영역(ON:ME 도메인). MiniPG는 레코드만 추가하고 영역은 참조만 한다"
+  type        = string
+  default     = "on-me-app.com"
+}
+
+variable "pg_subdomain" {
+  description = "PG API 주소의 서브도메인 (pg → pg.on-me-app.com)"
+  type        = string
+  default     = "pg"
+}

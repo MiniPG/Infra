@@ -28,3 +28,8 @@ output "grafana_url" {
 output "grafana_password_command" {
   value = "aws ssm get-parameter --name /${var.project}/grafana-admin-password --with-decryption --query Parameter.Value --output text"
 }
+
+output "pg_url" {
+  description = "PG API 주소 (내 IP에서만 접근 가능)"
+  value       = "https://${local.pg_fqdn}"
+}
