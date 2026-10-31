@@ -28,7 +28,10 @@ data "aws_iam_policy_document" "github_assume" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = [for repo in keys(var.app_repos) : "repo:${var.github_org}/${repo}:ref:refs/heads/main"]
+      # GitHub은 sub에 조직·레포의 고정 ID를 함께 넣는다
+      #   예) repo:MiniPG@349692158/PG-Server@1438055737:ref:refs/heads/main
+      # 조직 ID까지 고정해 두면, 조직 이름이 바뀌고 누군가 같은 이름을 가져가도 이 역할을 쓸 수 없다
+      values = [for repo in keys(var.app_repos) : "repo:${var.github_org}@${var.github_org_id}/${repo}@*:ref:refs/heads/main"]
     }
   }
 }
