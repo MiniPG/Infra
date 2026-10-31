@@ -1,0 +1,15 @@
+# ── PG-Server ──
+set +x
+APP_PW=$(secret pg-db/app-password)
+
+docker run -d --name pg-server --restart unless-stopped \
+  -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL="jdbc:mysql://${pg_db_host}:3306/pg?serverTimezone=Asia/Seoul" \
+  -e SPRING_DATASOURCE_USERNAME=pg \
+  -e SPRING_DATASOURCE_PASSWORD="$APP_PW" \
+  -e CARD_BASEURL="http://${card_host}:8081" \
+  -e LOG_DIR=/logs \
+  -e TZ=Asia/Seoul \
+  -v /var/log/minipg:/logs \
+  "${image}:latest"
+set -x

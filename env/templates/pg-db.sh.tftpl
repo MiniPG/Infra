@@ -1,0 +1,36 @@
+# ── PG DB: MySQL + mysqld_exporter ──
+set +x
+ROOT_PW=$(secret pg-db/root-password)
+APP_PW=$(secret pg-db/app-password)
+EXPORTER_PW=$(secret exporter-password)
+
+# 최초 기동 시 1번만 실행되는 초기화 SQL: exporter 읽기 전용 계정
+mkdir -p /opt/mysql-init
+cat > /opt/mysql-init/01-exporter.sql <<SQL
+CREATE USER IF NOT EXISTS 'exporter'@'%' IDENTIFIED BY '$EXPORTER_PW' WITH MAX_USER_CONNECTIONS 3;
+GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'%';
+SQL
+chmod 600 /opt/mysql-init/01-exporter.sql
+
+docker network create db
+
+docker run -d --name mysql --network db --restart unless-stopped \
+  -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD="$ROOT_PW" \
+  -e MYSQL_DATABASE=pg -e MYSQL_USER=pg -e MYSQL_PASSWORD="$APP_PW" \
+  -e TZ=Asia/Seoul \
+  -v mysql-data:/var/lib/mysql \
+  -v /opt/mysql-init:/docker-entrypoint-initdb.d:ro \
+  mysql:8.0 \
+  --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci \
+  --slow_query_log=ON --long_query_time=0.2
+
+docker run -d --name mysqld-exporter --network db --restart unless-stopped \
+  -p 9104:9104 \
+  -e MYSQLD_EXPORTER_PASSWORD="$EXPORTER_PW" \
+  prom/mysqld-exporter:v0.16.0 \
+  --mysqld.address=mysql:3306 --mysqld.username=exporter \
+  --collect.info_schema.innodb_metrics \
+  --collect.perf_schema.eventsstatements \
+  --collect.perf_schema.tableiowaits
+set -x

@@ -1,0 +1,46 @@
+# ── 카드사: MySQL + mysqld_exporter + Card-Server (같은 Docker 네트워크) ──
+set +x
+ROOT_PW=$(secret card-db/root-password)
+APP_PW=$(secret card-db/app-password)
+EXPORTER_PW=$(secret exporter-password)
+
+mkdir -p /opt/mysql-init
+cat > /opt/mysql-init/01-exporter.sql <<SQL
+CREATE USER IF NOT EXISTS 'exporter'@'%' IDENTIFIED BY '$EXPORTER_PW' WITH MAX_USER_CONNECTIONS 3;
+GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'%';
+SQL
+chmod 600 /opt/mysql-init/01-exporter.sql
+
+docker network create card
+
+# 카드사 DB는 같은 인스턴스 안에서만 접근 → 3306 포트를 외부로 열지 않음
+docker run -d --name mysql --network card --restart unless-stopped \
+  -e MYSQL_ROOT_PASSWORD="$ROOT_PW" \
+  -e MYSQL_DATABASE=card -e MYSQL_USER=card -e MYSQL_PASSWORD="$APP_PW" \
+  -e TZ=Asia/Seoul \
+  -v mysql-data:/var/lib/mysql \
+  -v /opt/mysql-init:/docker-entrypoint-initdb.d:ro \
+  mysql:8.0 \
+  --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci \
+  --slow_query_log=ON --long_query_time=0.2
+
+docker run -d --name mysqld-exporter --network card --restart unless-stopped \
+  -p 9104:9104 \
+  -e MYSQLD_EXPORTER_PASSWORD="$EXPORTER_PW" \
+  prom/mysqld-exporter:v0.16.0 \
+  --mysqld.address=mysql:3306 --mysqld.username=exporter \
+  --collect.info_schema.innodb_metrics \
+  --collect.perf_schema.eventsstatements \
+  --collect.perf_schema.tableiowaits
+
+# DB가 뜨기 전에 앱이 먼저 실패해도 --restart로 재시도한다
+docker run -d --name card-server --network card --restart unless-stopped \
+  -p 8081:8081 \
+  -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql:3306/card?serverTimezone=Asia/Seoul" \
+  -e SPRING_DATASOURCE_USERNAME=card \
+  -e SPRING_DATASOURCE_PASSWORD="$APP_PW" \
+  -e LOG_DIR=/logs \
+  -e TZ=Asia/Seoul \
+  -v /var/log/minipg:/logs \
+  "${image}:latest"
+set -x

@@ -1,0 +1,20 @@
+#!/bin/bash
+# 공통 준비: Docker 설치, ECR 로그인, 비밀번호 조회 함수
+# 실행 로그: /var/log/cloud-init-output.log
+set -euxo pipefail
+
+REGION="${region}"
+
+dnf install -y docker
+systemctl enable --now docker
+
+# SSM Parameter Store에서 비밀번호 조회 (복호화)
+# 비밀번호를 다루는 구간은 호출하는 쪽에서 set +x로 감싸 로그(cloud-init-output.log)에 평문이 남지 않게 한다
+secret() {
+  aws ssm get-parameter --region "$REGION" --name "/${project}/$1" --with-decryption --query Parameter.Value --output text
+}
+
+aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "${registry}"
+
+# 앱 로그 디렉터리 (컨테이너의 /logs와 연결, 이후 Alloy가 읽음)
+mkdir -p /var/log/minipg

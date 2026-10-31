@@ -25,3 +25,9 @@ variable "azs" {
   type        = list(string)
   default     = ["ap-northeast-2a", "ap-northeast-2c"]
 }
+
+variable "app_instance_type" {
+  description = "PG, PG DB, 카드사 인스턴스 타입 (t4g.small은 2026-12-31까지 월 750시간 무료 체험)"
+  type        = string
+  default     = "t4g.small"
+}
