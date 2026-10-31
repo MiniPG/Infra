@@ -31,3 +31,15 @@ variable "app_instance_type" {
   type        = string
   default     = "t4g.small"
 }
+
+variable "monitoring_instance_type" {
+  description = "모니터링 인스턴스 타입 (Prometheus·Grafana·Loki를 함께 띄우므로 메모리 4GB)"
+  type        = string
+  default     = "t4g.medium"
+}
+
+variable "monitoring_repo" {
+  description = "부팅 시 받아오는 Monitoring 레포 (public)"
+  type        = string
+  default     = "https://github.com/MiniPG/Monitoring.git"
+}

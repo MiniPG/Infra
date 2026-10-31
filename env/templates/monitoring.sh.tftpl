@@ -1,0 +1,9 @@
+# ── 모니터링: Prometheus + Grafana + Loki (Monitoring 레포 aws/) ──
+git clone --depth 1 "${repo}" /opt/monitoring
+cd /opt/monitoring/aws
+
+set +x
+export GRAFANA_ADMIN_PASSWORD=$(secret grafana-admin-password)
+docker compose up -d
+unset GRAFANA_ADMIN_PASSWORD
+set -x

@@ -1,0 +1,7 @@
+# ── 관측 에이전트(Alloy): 앱 로그 → Loki, 호스트 지표 → Prometheus ──
+git clone --depth 1 "${repo}" /opt/monitoring
+cd /opt/monitoring/agent
+LOKI_URL="http://${monitoring_host}:3100/loki/api/v1/push" \
+PROMETHEUS_URL="http://${monitoring_host}:9090/api/v1/write" \
+HOST_NAME="${host_name}" \
+docker compose up -d

@@ -6,11 +6,12 @@
 # ─────────────────────────────────────────────
 locals {
   db_secrets = {
-    "pg-db/root-password"   = "PG DB root 계정"
-    "pg-db/app-password"    = "PG DB 애플리케이션 계정(pg)"
-    "card-db/root-password" = "카드사 DB root 계정"
-    "card-db/app-password"  = "카드사 DB 애플리케이션 계정(card)"
-    "exporter-password"     = "mysqld_exporter 읽기 전용 계정"
+    "pg-db/root-password"    = "PG DB root 계정"
+    "pg-db/app-password"     = "PG DB 애플리케이션 계정(pg)"
+    "card-db/root-password"  = "카드사 DB root 계정"
+    "card-db/app-password"   = "카드사 DB 애플리케이션 계정(card)"
+    "exporter-password"      = "mysqld_exporter 읽기 전용 계정"
+    "grafana-admin-password" = "Grafana admin 계정"
   }
 }
 

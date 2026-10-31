@@ -2,6 +2,8 @@
 set +x
 APP_PW=$(secret pg-db/app-password)
 
+ecr_login
+
 docker run -d --name pg-server --restart unless-stopped \
   -p 8080:8080 \
   -e SPRING_DATASOURCE_URL="jdbc:mysql://${pg_db_host}:3306/pg?serverTimezone=Asia/Seoul" \

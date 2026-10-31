@@ -10,6 +10,9 @@ cat > /opt/mysql-init/01-exporter.sql <<SQL
 CREATE USER IF NOT EXISTS 'exporter'@'%' IDENTIFIED BY '$EXPORTER_PW' WITH MAX_USER_CONNECTIONS 3;
 GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'%';
 SQL
+# MySQL 컨테이너는 초기화 SQL을 root가 아니라 mysql 사용자(uid 999)로 실행한다
+# → 소유자를 999로 바꿔 읽을 수 있게 하고, 비밀번호가 들어 있으므로 권한은 600(소유자만)을 유지
+chown 999:999 /opt/mysql-init/01-exporter.sql
 chmod 600 /opt/mysql-init/01-exporter.sql
 
 docker network create db
