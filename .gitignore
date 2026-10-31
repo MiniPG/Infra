@@ -1,0 +1,19 @@
+# Terraform 상태·캐시 (리소스 ID, IP, 비밀번호가 들어갈 수 있음)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# 실제 값 (내 IP, 비밀번호 등)
+*.tfvars
+*.tfvars.json
+!example.tfvars
+
+# 키
+*.pem
+*.key
+
+# IDE
+.idea/
+.DS_Store
