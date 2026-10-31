@@ -19,10 +19,13 @@ ecr_login
 docker network create card
 
 # 카드사 DB는 같은 인스턴스 안에서만 접근 → 3306 포트를 외부로 열지 않음
+# 헬스 체크: 127.0.0.1(TCP)로 ping → 초기화 중 임시 서버(네트워크 꺼짐)가 아니라 실제 서버가 떴을 때만 healthy
 docker run -d --name mysql --network card --restart unless-stopped \
   -e MYSQL_ROOT_PASSWORD="$ROOT_PW" \
   -e MYSQL_DATABASE=card -e MYSQL_USER=card -e MYSQL_PASSWORD="$APP_PW" \
   -e TZ=Asia/Seoul \
+  --health-cmd 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' \
+  --health-interval 5s --health-timeout 3s --health-retries 3 --health-start-period 30s \
   -v mysql-data:/var/lib/mysql \
   -v /opt/mysql-init:/docker-entrypoint-initdb.d:ro \
   mysql:8.0 \
@@ -38,7 +41,12 @@ docker run -d --name mysqld-exporter --network card --restart unless-stopped \
   --collect.perf_schema.eventsstatements \
   --collect.perf_schema.tableiowaits
 
-# DB가 뜨기 전에 앱이 먼저 실패해도 --restart로 재시도한다
+# MySQL이 healthy가 될 때까지 기다린 뒤 앱 실행 (최대 5분, 넘으면 그냥 실행하고 --restart에 맡김)
+for i in $(seq 1 60); do
+  [ "$(docker inspect -f '{{.State.Health.Status}}' mysql)" = "healthy" ] && break
+  echo "waiting for card mysql... ($i)"
+  sleep 5
+done
 docker run -d --name card-server --network card --restart unless-stopped \
   -p 8081:8081 \
   -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql:3306/card?serverTimezone=Asia/Seoul" \

@@ -4,6 +4,14 @@ APP_PW=$(secret pg-db/app-password)
 
 ecr_login
 
+# PG DB가 연결을 받을 때까지 기다린 뒤 앱 실행 (최대 5분, 넘으면 그냥 실행하고 --restart에 맡김)
+# MySQL은 최초 초기화 중엔 네트워크를 끈 임시 서버로 돌기 때문에, 3306이 열렸다 = 초기화가 끝나고 실제 서버가 떴다
+for i in $(seq 1 60); do
+  timeout 2 bash -c "</dev/tcp/${pg_db_host}/3306" 2>/dev/null && break
+  echo "waiting for pg mysql (${pg_db_host}:3306)... ($i)"
+  sleep 5
+done
+
 docker run -d --name pg-server --restart unless-stopped \
   -p 8080:8080 \
   -e SPRING_DATASOURCE_URL="jdbc:mysql://${pg_db_host}:3306/pg?serverTimezone=Asia/Seoul" \

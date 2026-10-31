@@ -17,11 +17,14 @@ chmod 600 /opt/mysql-init/01-exporter.sql
 
 docker network create db
 
+# 헬스 체크: 127.0.0.1(TCP)로 ping → 초기화 중 임시 서버(네트워크 꺼짐)가 아니라 실제 서버가 떴을 때만 healthy
 docker run -d --name mysql --network db --restart unless-stopped \
   -p 3306:3306 \
   -e MYSQL_ROOT_PASSWORD="$ROOT_PW" \
   -e MYSQL_DATABASE=pg -e MYSQL_USER=pg -e MYSQL_PASSWORD="$APP_PW" \
   -e TZ=Asia/Seoul \
+  --health-cmd 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' \
+  --health-interval 5s --health-timeout 3s --health-retries 3 --health-start-period 30s \
   -v mysql-data:/var/lib/mysql \
   -v /opt/mysql-init:/docker-entrypoint-initdb.d:ro \
   mysql:8.0 \
