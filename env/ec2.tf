@@ -164,9 +164,10 @@ resource "aws_instance" "pg" {
   user_data = join("\n", [
     local.bootstrap,
     templatefile("${path.module}/templates/pg.sh.tftpl", {
-      image      = local.ecr_repos["PG-Server"]
-      pg_db_host = aws_instance.pg_db.private_ip
-      card_host  = aws_instance.card.private_ip
+      image       = local.ecr_repos["PG-Server"]
+      pg_db_host  = aws_instance.pg_db.private_ip
+      card_host   = aws_instance.card.private_ip
+      jfr_enabled = var.pg_jfr_enabled
     }),
     local.agent["pg"],
   ])

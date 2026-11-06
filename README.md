@@ -28,6 +28,22 @@ terraform apply                      # 시작
 terraform destroy                    # 끝나면 반드시 (NAT Gateway·ALB는 켜둔 시간만큼 과금)
 ```
 
+## JFR 녹화 (필요할 때만)
+기본은 꺼져 있다. 켜면 PG 서버가 뜨는 순간부터 녹화하고, 회수할 때 컨테이너를 멈춰 파일로 남긴다.
+```
+# env/terraform.tfvars
+pg_jfr_enabled = true
+
+cd env && terraform apply             # PG 인스턴스가 다시 만들어지고 녹화용 S3 버킷이 생김
+
+# 부하 테스트가 끝난 뒤, Infra 루트에서
+./scripts/fetch-pg-jfr.sh ../LoadTest/results
+jfr view hot-methods ../LoadTest/results/pg-<시각>.jfr
+```
+- 회수하는 동안 PG 서버가 잠깐 멈췄다가 다시 켜진다. 측정이 모두 끝난 뒤에 실행한다
+- 녹화는 서버가 떠 있던 전체 구간이다. 특정 단계만 보려면 JMC에서 시간 구간을 고른다
+- 끄려면 `pg_jfr_enabled`를 지우고 `terraform apply` (PG 인스턴스가 다시 만들어지고 버킷은 지워짐)
+
 ## 주의
 - `*.tfstate`, `terraform.tfvars`, 키 파일은 Git에 올리지 않는다 (.gitignore)
 - 집 IP가 바뀌면 `terraform.tfvars`의 `my_ip_cidr`를 고치고 `terraform apply`

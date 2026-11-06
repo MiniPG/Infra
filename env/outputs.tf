@@ -33,3 +33,8 @@ output "pg_url" {
   description = "PG API 주소 (내 IP에서만 접근 가능)"
   value       = "https://${local.pg_fqdn}"
 }
+
+output "jfr_bucket" {
+  description = "JFR 녹화 파일을 옮기는 S3 버킷 (pg_jfr_enabled = true일 때만)"
+  value       = var.pg_jfr_enabled ? aws_s3_bucket.jfr[0].bucket : ""
+}

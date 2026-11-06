@@ -12,8 +12,15 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
+%{ if jfr_enabled ~}
+mkdir -p /var/log/minipg-jfr
+%{ endif ~}
 docker run -d --name pg-server --restart unless-stopped \
   -p 8080:8080 \
+%{ if jfr_enabled ~}
+  -e JAVA_TOOL_OPTIONS="-XX:StartFlightRecording=settings=profile,disk=true,maxage=2h,dumponexit=true,filename=/jfr/pg.jfr" \
+  -v /var/log/minipg-jfr:/jfr \
+%{ endif ~}
   -e SPRING_DATASOURCE_URL="jdbc:mysql://${pg_db_host}:3306/pg?serverTimezone=Asia/Seoul" \
   -e SPRING_DATASOURCE_USERNAME=pg \
   -e SPRING_DATASOURCE_PASSWORD="$APP_PW" \
