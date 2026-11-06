@@ -28,6 +28,12 @@ terraform apply                      # 시작
 terraform destroy                    # 끝나면 반드시 (NAT Gateway·ALB는 켜둔 시간만큼 과금)
 ```
 
+## Grafana 접속
+```
+./scripts/grafana.sh
+```
+주소, 내 IP가 허용됐는지, 접속 가능한지 확인하고 비밀번호를 클립보드에 복사한 뒤 브라우저로 연다.
+
 ## JFR 녹화 (필요할 때만)
 기본은 꺼져 있다. 켜면 PG 서버가 뜨는 순간부터 녹화하고, 회수할 때 컨테이너를 멈춰 파일로 남긴다.
 ```
