@@ -56,6 +56,11 @@ echo
 echo "== mysqld CPU 표본: 라이브러리별"
 DEBUGINFOD_URLS= timeout 90 perf report -i /tmp/perf.data --stdio --no-children --sort dso -q 2>/dev/null | head -12
 echo
+echo "== mysqld CPU 표본: Docker 네트워크 처리 (NAT, conntrack, 브리지, 포워딩) 합계"
+DEBUGINFOD_URLS= timeout 90 perf report -i /tmp/perf.data --stdio --no-children --sort sym -q 2>/dev/null \
+  | grep -E 'nf_|nft_|br_|ip_forward|conntrack|veth|fib_|nat' \
+  | awk '{gsub("%","",$1); s+=$1} END {printf "%.2f%%\n", s}'
+echo
 echo "== mysqld CPU 표본: 함수별 상위 30"
 DEBUGINFOD_URLS= timeout 90 perf report -i /tmp/perf.data --stdio --no-children --sort sym -q 2>/dev/null | head -30
 SH
