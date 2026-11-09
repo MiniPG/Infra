@@ -15,8 +15,7 @@ done
 %{ if jfr_enabled ~}
 mkdir -p /var/log/minipg-jfr
 %{ endif ~}
-docker run -d --name pg-server --restart unless-stopped \
-  -p 8080:8080 \
+docker run -d --name pg-server --network host --restart unless-stopped \
 %{ if jfr_enabled ~}
   -e JAVA_TOOL_OPTIONS="-XX:StartFlightRecording=settings=profile,disk=true,maxage=2h,dumponexit=true,filename=/jfr/pg.jfr" \
   -v /var/log/minipg-jfr:/jfr \

@@ -15,11 +15,8 @@ SQL
 chown 999:999 /opt/mysql-init/01-exporter.sql
 chmod 600 /opt/mysql-init/01-exporter.sql
 
-docker network create db
-
 # 헬스 체크: 127.0.0.1(TCP)로 ping → 초기화 중 임시 서버(네트워크 꺼짐)가 아니라 실제 서버가 떴을 때만 healthy
-docker run -d --name mysql --network db --restart unless-stopped \
-  -p 3306:3306 \
+docker run -d --name mysql --network host --restart unless-stopped \
   -e MYSQL_ROOT_PASSWORD="$ROOT_PW" \
   -e MYSQL_DATABASE=pg -e MYSQL_USER=pg -e MYSQL_PASSWORD="$APP_PW" \
   -e TZ=Asia/Seoul \
@@ -31,11 +28,10 @@ docker run -d --name mysql --network db --restart unless-stopped \
   --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci \
   --slow_query_log=ON --long_query_time=0.2
 
-docker run -d --name mysqld-exporter --network db --restart unless-stopped \
-  -p 9104:9104 \
+docker run -d --name mysqld-exporter --network host --restart unless-stopped \
   -e MYSQLD_EXPORTER_PASSWORD="$EXPORTER_PW" \
   prom/mysqld-exporter:v0.16.0 \
-  --mysqld.address=mysql:3306 --mysqld.username=exporter \
+  --mysqld.address=127.0.0.1:3306 --mysqld.username=exporter \
   --collect.info_schema.innodb_metrics \
   --collect.perf_schema.eventsstatements \
   --collect.perf_schema.tableiowaits

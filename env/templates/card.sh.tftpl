@@ -16,11 +16,9 @@ chmod 600 /opt/mysql-init/01-exporter.sql
 
 ecr_login
 
-docker network create card
-
-# 카드사 DB는 같은 인스턴스 안에서만 접근 → 3306 포트를 외부로 열지 않음
+# 카드사 DB는 같은 인스턴스 안에서만 접근 → 보안 그룹이 3306을 열지 않음
 # 헬스 체크: 127.0.0.1(TCP)로 ping → 초기화 중 임시 서버(네트워크 꺼짐)가 아니라 실제 서버가 떴을 때만 healthy
-docker run -d --name mysql --network card --restart unless-stopped \
+docker run -d --name mysql --network host --restart unless-stopped \
   -e MYSQL_ROOT_PASSWORD="$ROOT_PW" \
   -e MYSQL_DATABASE=card -e MYSQL_USER=card -e MYSQL_PASSWORD="$APP_PW" \
   -e TZ=Asia/Seoul \
@@ -32,11 +30,10 @@ docker run -d --name mysql --network card --restart unless-stopped \
   --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci \
   --slow_query_log=ON --long_query_time=0.2
 
-docker run -d --name mysqld-exporter --network card --restart unless-stopped \
-  -p 9104:9104 \
+docker run -d --name mysqld-exporter --network host --restart unless-stopped \
   -e MYSQLD_EXPORTER_PASSWORD="$EXPORTER_PW" \
   prom/mysqld-exporter:v0.16.0 \
-  --mysqld.address=mysql:3306 --mysqld.username=exporter \
+  --mysqld.address=127.0.0.1:3306 --mysqld.username=exporter \
   --collect.info_schema.innodb_metrics \
   --collect.perf_schema.eventsstatements \
   --collect.perf_schema.tableiowaits
@@ -47,9 +44,8 @@ for i in $(seq 1 60); do
   echo "waiting for card mysql... ($i)"
   sleep 5
 done
-docker run -d --name card-server --network card --restart unless-stopped \
-  -p 8081:8081 \
-  -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql:3306/card?serverTimezone=Asia/Seoul" \
+docker run -d --name card-server --network host --restart unless-stopped \
+  -e SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:3306/card?serverTimezone=Asia/Seoul" \
   -e SPRING_DATASOURCE_USERNAME=card \
   -e SPRING_DATASOURCE_PASSWORD="$APP_PW" \
   -e LOG_DIR=/logs \
