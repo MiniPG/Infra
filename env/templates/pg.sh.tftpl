@@ -23,6 +23,7 @@ docker run -d --name pg-server --network host --restart unless-stopped \
   -e SPRING_DATASOURCE_URL="jdbc:mysql://${pg_db_host}:3306/pg?serverTimezone=Asia/Seoul" \
   -e SPRING_DATASOURCE_USERNAME=pg \
   -e SPRING_DATASOURCE_PASSWORD="$APP_PW" \
+  -e SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE=${pool_size} \
   -e CARD_BASEURL="http://${card_host}:8081" \
   -e LOG_DIR=/logs \
   -e TZ=Asia/Seoul \

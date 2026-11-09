@@ -168,6 +168,7 @@ resource "aws_instance" "pg" {
       pg_db_host  = aws_instance.pg_db.private_ip
       card_host   = aws_instance.card.private_ip
       jfr_enabled = var.pg_jfr_enabled
+      pool_size   = var.pg_db_pool_size
     }),
     local.agent["pg"],
   ])

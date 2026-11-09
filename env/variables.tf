@@ -56,6 +56,12 @@ variable "pg_subdomain" {
   default     = "pg"
 }
 
+variable "pg_db_pool_size" {
+  description = "PG 서버의 DB 커넥션 풀 크기 (HikariCP maximum-pool-size). 바꾸면 PG 인스턴스가 다시 만들어짐"
+  type        = number
+  default     = 10
+}
+
 variable "pg_jfr_enabled" {
   description = "true면 PG 서버를 JFR 녹화를 켠 채 띄우고, 녹화 파일을 옮길 S3 버킷을 만든다 (회수: scripts/fetch-pg-jfr.sh). 바꾸면 PG 인스턴스가 다시 만들어짐"
   type        = bool
