@@ -50,6 +50,18 @@ jfr view hot-methods ../LoadTest/results/pg-<시각>.jfr
 - 녹화는 서버가 떠 있던 전체 구간이다. 특정 단계만 보려면 JMC에서 시간 구간을 고른다
 - 끄려면 `pg_jfr_enabled`를 지우고 `terraform apply` (PG 인스턴스가 다시 만들어지고 버킷은 지워짐)
 
+### PG DB 진단
+
+부하를 유지하는 구간 한가운데에서 실행하면, PG DB 서버에서 30초 동안 CPU 모드별 비율(`mpstat`), 초당 쿼리 종류(MySQL 상태 변수), 쿼리 종류별 누적 시간(`performance_schema`), mysqld가 CPU를 쓴 함수(`perf`)를 모아 출력하고 파일로 남긴다. 설정 변경이나 재시작은 없다.
+```
+# Infra 루트에서
+./scripts/diagnose-pg-db.sh ../LoadTest/results          # 30초
+SEC=60 ./scripts/diagnose-pg-db.sh ../LoadTest/results   # 60초
+```
+- 처음 실행할 때 DB 서버에 `sysstat`, `perf`를 설치한다(수십 초)
+- 시작할 때 `performance_schema` 쿼리 요약 테이블을 비우므로, Grafana 쿼리별 패널이 잠깐 끊긴다
+- `perf`가 mysqld 표본을 찍는 비용이 있어 그 30초의 지표는 비교에 쓰지 않는다
+
 ## 주의
 - `*.tfstate`, `terraform.tfvars`, 키 파일은 Git에 올리지 않는다 (.gitignore)
 - 집 IP가 바뀌면 `terraform.tfvars`의 `my_ip_cidr`를 고치고 `terraform apply`
