@@ -12,6 +12,7 @@ set -euo pipefail
 REGION="${AWS_REGION:-ap-northeast-2}"
 ENV_DIR="$(cd "$(dirname "$0")/../env" && pwd)"
 SHA="${1:?커밋 SHA 전체를 넣으세요}"
+[[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "SHA는 40자리 16진수여야 합니다: $SHA"; exit 1; }
 OUT_DIR="${2:-.}"
 PREV_LABEL="${3:-prev}"
 BUCKET=$(terraform -chdir="$ENV_DIR" output -raw jfr_bucket 2>/dev/null || true)
@@ -81,6 +82,7 @@ for i in $(seq 1 120); do
 done
 aws ssm get-command-invocation --region "$REGION" --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
   --query '[Status, StandardOutputContent, StandardErrorContent]' --output text
+[ "$STATUS" = "Success" ] || { echo "이미지 교체 실패 ($STATUS)"; exit 1; }
 
 if [ -n "$BUCKET" ] && aws s3 ls --region "$REGION" "s3://$BUCKET/$KEY" >/dev/null 2>&1; then
   mkdir -p "$OUT_DIR"
