@@ -1,5 +1,5 @@
 #!/bin/bash
-# 같은 PG 인스턴스에서 컨테이너 이미지만 바꿔 다시 띄운다. 코드 A/B 비교용 (인스턴스를 새로 만들면 물리 서버가 달라짐)
+# PG 인스턴스(여러 대면 모두)에서 컨테이너 이미지만 바꿔 다시 띄운다. 코드 A/B 비교용 (인스턴스를 새로 만들면 물리 서버가 달라짐)
 #   SSM Run Command로 실행. 환경 변수와 볼륨은 지금 컨테이너 것을 그대로 쓰고, 이미지 태그만 커밋 SHA로 바꾼다
 #   JFR이 켜져 있으면, 멈추면서 남은 직전 실행의 녹화를 S3에 올린 뒤 OUT_DIR로 내려받는다
 #
@@ -17,12 +17,12 @@ OUT_DIR="${2:-.}"
 PREV_LABEL="${3:-prev}"
 BUCKET=$(terraform -chdir="$ENV_DIR" output -raw jfr_bucket 2>/dev/null || true)
 
-INSTANCE_ID=$(aws ec2 describe-instances --region "$REGION" \
+INSTANCES=$(aws ec2 describe-instances --region "$REGION" \
   --filters Name=tag:Project,Values=minipg Name=tag:Role,Values=pg Name=instance-state-name,Values=running \
-  --query 'Reservations[].Instances[].InstanceId' --output text)
-[ -z "$INSTANCE_ID" ] && { echo "실행 중인 pg 인스턴스가 없습니다"; exit 1; }
+  --query 'Reservations[].Instances[].[InstanceId, Tags[?Key==`Name`]|[0].Value]' --output text | sort -k2)
+[ -z "$INSTANCES" ] && { echo "실행 중인 pg 인스턴스가 없습니다"; exit 1; }
 
-KEY="pg-$(date +%Y%m%d-%H%M%S)-${PREV_LABEL}.jfr"
+STAMP=$(date +%Y%m%d-%H%M%S)
 
 REMOTE=$(cat <<'EOS'
 set -euo pipefail
@@ -63,29 +63,39 @@ EOS
 )
 REMOTE_B64=$(printf '%s' "$REMOTE" | base64 | tr -d '\n')
 
-PARAMS=$(mktemp)
-trap 'rm -f "$PARAMS"' EXIT
-cat > "$PARAMS" <<JSON
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+while read -r ID NAME; do
+  KEY="pg-${STAMP}-${PREV_LABEL}-${NAME#minipg-}.jfr"
+  cat > "$TMP/$ID.json" <<JSON
 {"commands": ["echo $REMOTE_B64 | base64 -d > /root/swap-pg.sh && bash /root/swap-pg.sh $SHA $REGION '$BUCKET' $KEY"],
  "executionTimeout": ["600"]}
 JSON
+  CMD_ID=$(aws ssm send-command --region "$REGION" --instance-ids "$ID" \
+    --document-name AWS-RunShellScript --parameters "file://$TMP/$ID.json" \
+    --query Command.CommandId --output text)
+  echo "$ID $NAME $CMD_ID $KEY" >> "$TMP/commands"
+  echo "$NAME ($ID) → $SHA"
+done <<< "$INSTANCES"
 
-echo "pg: $INSTANCE_ID → $SHA"
-CMD_ID=$(aws ssm send-command --region "$REGION" --instance-ids "$INSTANCE_ID" \
-  --document-name AWS-RunShellScript --parameters "file://$PARAMS" \
-  --query Command.CommandId --output text)
+FAILED=0
+while read -r ID NAME CMD_ID KEY; do
+  for i in $(seq 1 120); do
+    STATUS=$(aws ssm get-command-invocation --region "$REGION" --command-id "$CMD_ID" --instance-id "$ID" \
+      --query Status --output text 2>/dev/null || echo Pending)
+    case "$STATUS" in Pending|InProgress|Delayed) sleep 5 ;; *) break ;; esac
+  done
+  echo "== $NAME"
+  aws ssm get-command-invocation --region "$REGION" --command-id "$CMD_ID" --instance-id "$ID" \
+    --query '[Status, StandardOutputContent, StandardErrorContent]' --output text
+  [ "$STATUS" = "Success" ] || { echo "$NAME 이미지 교체 실패 ($STATUS)"; FAILED=1; }
 
-for i in $(seq 1 120); do
-  STATUS=$(aws ssm get-command-invocation --region "$REGION" --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
-    --query Status --output text 2>/dev/null || echo Pending)
-  case "$STATUS" in Pending|InProgress|Delayed) sleep 5 ;; *) break ;; esac
-done
-aws ssm get-command-invocation --region "$REGION" --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
-  --query '[Status, StandardOutputContent, StandardErrorContent]' --output text
-[ "$STATUS" = "Success" ] || { echo "이미지 교체 실패 ($STATUS)"; exit 1; }
+  if [ -n "$BUCKET" ] && aws s3 ls --region "$REGION" "s3://$BUCKET/$KEY" >/dev/null 2>&1; then
+    mkdir -p "$OUT_DIR"
+    aws s3 cp --only-show-errors --region "$REGION" "s3://$BUCKET/$KEY" "$OUT_DIR/$KEY"
+    echo "저장: $OUT_DIR/$KEY"
+  fi
+done < "$TMP/commands"
 
-if [ -n "$BUCKET" ] && aws s3 ls --region "$REGION" "s3://$BUCKET/$KEY" >/dev/null 2>&1; then
-  mkdir -p "$OUT_DIR"
-  aws s3 cp --only-show-errors --region "$REGION" "s3://$BUCKET/$KEY" "$OUT_DIR/$KEY"
-  echo "저장: $OUT_DIR/$KEY"
-fi
+[ "$FAILED" = 0 ] || exit 1

@@ -86,8 +86,9 @@ resource "aws_lb_target_group" "pg" {
 }
 
 resource "aws_lb_target_group_attachment" "pg" {
+  count            = var.pg_count
   target_group_arn = aws_lb_target_group.pg.arn
-  target_id        = aws_instance.pg.id
+  target_id        = aws_instance.pg[count.index].id
   port             = 8080
 }
 

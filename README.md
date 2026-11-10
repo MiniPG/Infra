@@ -34,6 +34,13 @@ terraform destroy                    # 끝나면 반드시 (NAT Gateway·ALB는 
 ```
 주소, 내 IP가 허용됐는지, 접속 가능한지 확인하고 비밀번호를 클립보드에 복사한 뒤 브라우저로 연다.
 
+## PG 서버 여러 대
+```
+# env/terraform.tfvars
+pg_count = 2
+```
+PG 서버가 모두 같은 AZ(private[0])에 뜨고 ALB 대상 그룹에 붙는다. 이름 태그는 `minipg-pg-1`, `minipg-pg-2`이고, 호스트 지표의 `host` 라벨은 `pg-1`, `pg-2`다. `fetch-pg-jfr.sh`, `swap-pg-image.sh`는 모든 PG 인스턴스에 대해 실행한다.
+
 ## JFR 녹화 (필요할 때만)
 기본은 꺼져 있다. 켜면 PG 서버가 뜨는 순간부터 녹화하고, 회수할 때 컨테이너를 멈춰 파일로 남긴다.
 ```

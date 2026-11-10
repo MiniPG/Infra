@@ -56,6 +56,12 @@ variable "pg_subdomain" {
   default     = "pg"
 }
 
+variable "pg_count" {
+  description = "PG 서버 대수. 모두 같은 AZ(private[0])에 두고 ALB 대상 그룹에 붙인다"
+  type        = number
+  default     = 1
+}
+
 variable "pg_db_pool_size" {
   description = "PG 서버의 DB 커넥션 풀 크기 (HikariCP maximum-pool-size). 바꾸면 PG 인스턴스가 다시 만들어짐"
   type        = number

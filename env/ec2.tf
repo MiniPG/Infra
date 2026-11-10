@@ -33,8 +33,10 @@ locals {
   })
 
   # 앱·DB 서버 뒤에 붙는 관측 에이전트(Alloy) 스크립트
+  agent_hosts = concat([for i in range(var.pg_count) : "pg-${i + 1}"], ["pg-db", "card"])
+
   agent = {
-    for host in ["pg", "pg-db", "card"] : host => templatefile("${path.module}/templates/agent.sh.tftpl", {
+    for host in local.agent_hosts : host => templatefile("${path.module}/templates/agent.sh.tftpl", {
       repo            = var.monitoring_repo
       monitoring_host = aws_instance.monitoring.private_ip
       host_name       = host
@@ -142,6 +144,7 @@ resource "aws_instance" "card" {
 }
 
 resource "aws_instance" "pg" {
+  count                  = var.pg_count
   ami                    = local.ami
   instance_type          = var.app_instance_type
   subnet_id              = aws_subnet.private[0].id
@@ -170,11 +173,11 @@ resource "aws_instance" "pg" {
       jfr_enabled = var.pg_jfr_enabled
       pool_size   = var.pg_db_pool_size
     }),
-    local.agent["pg"],
+    local.agent["pg-${count.index + 1}"],
   ])
   user_data_replace_on_change = true
 
   depends_on = [aws_nat_gateway.main, aws_route_table_association.private]
 
-  tags = { Name = "${var.project}-pg", Role = "pg" }
+  tags = { Name = "${var.project}-pg-${count.index + 1}", Role = "pg" }
 }

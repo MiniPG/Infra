@@ -6,3 +6,4 @@ my_ip_cidr = "1.2.3.4/32"
 
 # PG 서버를 JFR 녹화를 켠 채 띄울 때만 true (회수: ../scripts/fetch-pg-jfr.sh)
 # pg_jfr_enabled = true
+# pg_count = 2

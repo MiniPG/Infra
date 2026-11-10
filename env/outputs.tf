@@ -13,7 +13,7 @@ output "private_subnet_ids" {
 output "instances" {
   description = "인스턴스 ID와 private IP (SSM 접속, 포트 포워딩에 사용)"
   value = {
-    pg         = { id = aws_instance.pg.id, private_ip = aws_instance.pg.private_ip }
+    pg         = [for i in aws_instance.pg : { id = i.id, private_ip = i.private_ip }]
     pg_db      = { id = aws_instance.pg_db.id, private_ip = aws_instance.pg_db.private_ip }
     card       = { id = aws_instance.card.id, private_ip = aws_instance.card.private_ip }
     monitoring = { id = aws_instance.monitoring.id, private_ip = aws_instance.monitoring.private_ip }

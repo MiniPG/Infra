@@ -10,7 +10,7 @@ systemctl enable --now docker
 
 # docker compose 플러그인 (AL2023 docker 패키지에 포함돼 있지 않음)
 mkdir -p /usr/local/lib/docker/cli-plugins
-curl -fsSL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-aarch64 \
+curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-aarch64 \
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
